@@ -25,6 +25,8 @@
 */
 
 
+#include <string.h>
+#include <stdint.h>
 #include "flags.h"
 
 
@@ -65,4 +67,15 @@ const char *flag_code(int flag)
 const char *flag_msg(int flag)
 {
     return FLAG_MSG[flag];
+}
+
+
+uint16_t flag_hash_16(const char *input)
+{
+    uint8_t i = 0;
+    uint16_t hash = 0x0000;
+    for (i = 0; i < strlen(input); i++) {
+        hash ^= i % 2 ? (uint8_t)input[i] << 8 : (uint8_t)input[i];
+    }
+    return hash;
 }

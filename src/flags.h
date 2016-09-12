@@ -30,6 +30,9 @@
 
 #define MAX(a, b)  (((a) < (b)) ? (b) : (a))
 
+#include <stdint.h>
+
+
 // Flash: 256kB = 512 pages * 512B per page
 #ifndef IFLASH0_ADDR
 #define IFLASH0_ADDR                (0x00400000u)
@@ -77,6 +80,7 @@
 #define CMD_TABLE \
 /* parent keys  */\
 /*  with touch  */\
+X(NO_CMD)          /* placeholder - keep first */\
 X(sign)           \
 X(seed)           \
 X(reset)          \
@@ -202,11 +206,11 @@ X(ERR_IO_NO_PASSWORD,  101, "Please set a password.")\
 X(ERR_IO_PASSWORD_LEN, 102, "The password length must be at least " STRINGIFY(PASSWORD_LEN_MIN) " characters.")\
 X(ERR_IO_NO_INPUT,     103, "No input received.")\
 X(ERR_IO_INVALID_CMD,  104, "Invalid command.")\
-X(ERR_IO_MULT_CMD,     105, "Only one command allowed at a time.")\
+X(ERR_IO_MULT_CMD,     105, "-deprecated-")\
 X(ERR_IO_DATA_LEN,     106, "Data must be less than " STRINGIFY(AES_DATA_LEN_MAX)" characters.")\
 X(ERR_IO_REPORT_BUF,   107, "Output buffer overflow.")\
 X(ERR_IO_DECRYPT,      108, "Could not decrypt.")\
-X(ERR_IO_JSON_PARSE,   109, "JSON parse error.")\
+X(ERR_IO_JSON_PARSE,   109, "-deprecated-")\
 X(ERR_IO_RESET,        110, "Too many failed access attempts. Device reset.")\
 X(ERR_IO_LOCKED,       111, "Device locked. Erase device to access this command.")\
 X(ERR_IO_PW_COLLIDE,   112, "Device password matches reset password. Disabling reset password.")\
@@ -264,6 +268,7 @@ const char *cmd_str(int cmd);
 const char *attr_str(int attr);
 const char *flag_code(int flag);
 const char *flag_msg(int flag);
+uint16_t flag_hash_16(const char *input);
 
 
 #endif

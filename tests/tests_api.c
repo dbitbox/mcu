@@ -642,41 +642,14 @@ static void tests_input(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
-    api_send_cmd("{\"name\": \"name\", \"name\": \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_MULT_CMD));
-
 #ifndef CONTINUOUS_INTEGRATION
 // YAJL does not free allocated space for these improper JSON strings
 // so skip valgrind checks in travis CI.
-    api_send_cmd("\"name\": \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{name\": \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name: \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name\": \"name}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name\": \"name\"", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name\": \"name\", }", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name\": \"name\", \"name\"}", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
-    api_send_cmd("{\"name\": \"name\", \"name\": }", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
-
     api_send_cmd("{\"name\": \"na\\nme\"}", PASSWORD_STAND);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
@@ -693,7 +666,7 @@ static void tests_input(void)
     int i;
     for (i = 0; i < COMMANDER_MAX_ATTEMPTS - 1; i++) {
         api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
-        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
         u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_WARN_RESET));
     }
     api_send_cmd("{\"name\": \"name\"}", PASSWORD_NONE);
@@ -715,13 +688,13 @@ static void tests_password(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
 
     api_format_send_cmd(cmd_str(CMD_password), "", PASSWORD_NONE);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_NO_PASSWORD));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, PASSWORD_NONE);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_password), "123", PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_PASSWORD_LEN));
@@ -752,7 +725,7 @@ static void tests_password(void)
     // Test hidden password
     if (TEST_LIVE_DEVICE) {
         api_format_send_cmd(cmd_str(CMD_name), "", PASSWORD_HIDDEN);
-        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_JSON_PARSE));
+        u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
     }
 
     api_format_send_cmd(cmd_str(CMD_hidden_password), hidden_pwd, PASSWORD_STAND);
@@ -814,7 +787,6 @@ static void tests_password(void)
     u_assert_str_has_not(utils_read_decrypted_report(), attr_str(ATTR_error));
     memcpy(xpub1, api_read_value(CMD_xpub), sizeof(xpub1));
     u_assert_str_not_eq(xpub0, xpub1);
-
 
     // password command in hidden wallet changes hidden password
     api_format_send_cmd(cmd_str(CMD_password), hidden_pwd, PASSWORD_HIDDEN);
@@ -916,10 +888,10 @@ static void tests_echo_tfa(void)
 
     // test hash length
     api_format_send_cmd(cmd_str(CMD_sign), hash_sign3, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), cmd_str(CMD_echo));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign), "", PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_HASH_LEN));
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     // test locked
     api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_lock), PASSWORD_STAND);
@@ -1035,11 +1007,11 @@ static void tests_sign(void)
     char check_pubkey[] =
         "02df86355b162c942b89e297c1e919f40943834d448b0b6b4538556e805ea4e18c";
 
-    char checkpub_wrong_addr_len[] =
+    char checkpub_short_addr_len[] =
         "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"00\", \"keypath\":\"m/44p/0p/0p/1/8\"},{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\", \"keypath\":\"m/44p/0p/0p/1/8\"}]}";
 
     char checkpub_missing_parameter[] =
-        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\"}]}";
+        "{\"meta\":\"<<meta data here>>\", \"data\": [{\"hash\":\"c6fa4c236f59020ec8ffde22f85a78e7f256e94cd975eb5199a4a5cc73e26e4a\", \"keypath\":\"m/44p\"},{\"hash\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"keypath\":\"m/44p\"}], \"checkpub\":[{\"pubkey\":\"035e8c69793fd853795759b8ca12229d7b2e7ec2223221dc224885fc9a1e7e1704\",\"keypath\":\"\"}]}";
 
 
     api_reset_device();
@@ -1059,18 +1031,12 @@ static void tests_sign(void)
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"data\":[{\"keypath\":\"m/\"}]}",
+                        "{\"data\":[{\"keypath\":\"m/\",\"hash\":\"\"}]}",
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
     api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"data\":[{\"hash\":\"empty\"}]}",
-                        PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
-
-    // data is not an array
-    api_format_send_cmd(cmd_str(CMD_sign),
-                        "{\"data\":{\"hash\":\"empty\"}}",
+                        "{\"data\":[{\"hash\":\"empty\",\"keypath\":\"\"}]}",
                         PASSWORD_STAND);
     u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
@@ -1135,11 +1101,11 @@ static void tests_sign(void)
     u_assert_str_has(utils_read_decrypted_report(), check_sig_2);
     u_assert_str_has(utils_read_decrypted_report(), check_pubkey);
 
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_short_addr_len, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
-    api_format_send_cmd(cmd_str(CMD_sign), checkpub_wrong_addr_len, PASSWORD_STAND);
-    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_SIGN_PUBKEY_LEN));
+    api_format_send_cmd(cmd_str(CMD_sign), checkpub_short_addr_len, PASSWORD_STAND);
+    u_assert_str_has(utils_read_decrypted_report(), flag_msg(DBB_ERR_IO_INVALID_CMD));
 
 
     // lock to get TFA PINs
@@ -1371,8 +1337,25 @@ static void tests_aes_cbc(void)
 }
 
 
+static void tests_api_serialization(void)
+{
+    // Check for collision
+    for (int cmd = 0; cmd < CMD_NUM; cmd++) {
+        for (int collide = cmd + 1; collide < CMD_NUM; collide++) {
+            u_assert_int_not_eq(flag_hash_16(cmd_str(collide)), flag_hash_16(cmd_str(cmd)));
+        }
+    }
+    for (int attr = 0; attr < ATTR_NUM; attr++) {
+        for (int collide = attr + 1; collide < ATTR_NUM; collide++) {
+            u_assert_int_not_eq(flag_hash_16(attr_str(collide)), flag_hash_16(attr_str(attr)));
+        }
+    }
+}
+
+
 static void run_utests(void)
 {
+    u_run_test(tests_api_serialization);
     u_run_test(tests_echo_tfa);
     u_run_test(tests_aes_cbc);
     u_run_test(tests_name);

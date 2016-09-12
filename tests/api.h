@@ -85,37 +85,155 @@ static void api_hid_send_len(const char *cmd, int cmdlen)
 }
 
 
-static void api_hid_send(const char *cmd)
-{
-    api_hid_send_len(cmd, strlens(cmd));
-}
-
-
-static void api_hid_send_encrypt(const char *cmd, PASSWORD_ID id)
+static void api_hid_send_encrypt(const char *cmd, uint16_t len, PASSWORD_ID id)
 {
     int enc_len;
-    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, strlens(cmd), &enc_len, id);
+    char *enc = aes_cbc_b64_encrypt((const unsigned char *)cmd, len, &enc_len, id);
     api_hid_send_len(enc, enc_len);
     free(enc);
 }
 #endif
 
 
+static uint16_t api_serialize_json(const char *command, char *buffer)
+{
+    yajl_val json_node = yajl_tree_parse(command, NULL, 0);
+    const char *cmd_parent = json_node->u.object.keys[0];
+    yajl_val args = json_node->u.object.values[0];
+    size_t args_len = args->u.object.len;
+    uint16_t b_len = 0, ser_cmd;
+
+    // Parent command
+    ser_cmd = flag_hash_16(cmd_parent);
+    buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
+    buffer[b_len++] = (ser_cmd & 0x00FF);
+
+    if (!args_len) {
+        const char *cmd_val = json_node->u.object.values[0]->u.string;
+        uint16_t val_len = strlens(cmd_val) + 1;// add 1 for null
+
+        if (strlens(cmd_val)) {
+            // Add child command key
+            ser_cmd = flag_hash_16(cmd_str(CMD_value));
+            buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
+            buffer[b_len++] = (ser_cmd & 0x00FF);
+            // Child command value
+            buffer[b_len++] = (val_len & 0xFF00) >> 8;
+            buffer[b_len++] = (val_len & 0x00FF);
+            memcpy(buffer + b_len, cmd_val, val_len);
+            b_len += val_len;
+        }
+
+    } else {
+        for (size_t i = 0; i < args_len; i++) {
+            const char *arg_key = args->u.object.keys[i];
+            yajl_val arg_val = args->u.object.values[i];
+
+            // Add child command key
+            ser_cmd = flag_hash_16(arg_key);
+            buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
+            buffer[b_len++] = (ser_cmd & 0x00FF);
+
+            // Child command value
+            if (YAJL_IS_STRING(arg_val)) {
+                uint16_t val_len = strlens(arg_val->u.string) + 1;// add 1 for null
+                buffer[b_len++] = (val_len & 0xFF00) >> 8;
+                buffer[b_len++] = (val_len & 0x00FF);
+                memcpy(buffer + b_len, arg_val->u.string, val_len);
+                b_len += val_len;
+
+            } else if (YAJL_IS_ARRAY(arg_val)) {
+                char array_buf[COMMANDER_REPORT_SIZE];
+                memset(array_buf, 0, COMMANDER_REPORT_SIZE);
+                uint16_t ab_len = 0;
+
+                // case - data:[hash, keypath]
+                for (size_t j = 0; j < arg_val->u.array.len; j++) {
+                    yajl_val obj = arg_val->u.array.values[j];
+                    const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+                    const char *hash_path[] = { cmd_str(CMD_hash), NULL };
+                    const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
+                    const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
+
+                    if (hash && keypath) {
+                        uint16_t len = strlens(hash) + 1 + strlens(keypath) + 1;// add 1s for null
+                        array_buf[ab_len++] = (len & 0xFF00) >> 8;
+                        array_buf[ab_len++] = len & 0x00FF;
+
+                        memcpy(array_buf + ab_len, hash, strlens(hash) + 1);
+                        ab_len += strlens(hash) + 1;
+
+                        memcpy(array_buf + ab_len, keypath, strlens(keypath) + 1);
+                        ab_len += strlens(keypath) + 1;
+                    }
+                }
+
+                // case - checkpub:[pubkey]
+                for (size_t j = 0; j < arg_val->u.array.len; j++) {
+                    yajl_val obj = arg_val->u.array.values[j];
+                    const char *pubkey_path[] = { cmd_str(CMD_pubkey), NULL };
+                    const char *keypath_path[] = { cmd_str(CMD_keypath), NULL };
+                    const char *pubkey = YAJL_GET_STRING(yajl_tree_get(obj, pubkey_path, yajl_t_string));
+                    const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
+
+                    if (pubkey && keypath) {
+                        uint16_t len = strlens(pubkey) + 1 + strlens(keypath) + 1;// add 1s for null
+                        array_buf[ab_len++] = (len & 0xFF00) >> 8;
+                        array_buf[ab_len++] = len & 0x00FF;
+
+                        memcpy(array_buf + ab_len, pubkey, strlens(pubkey) + 1);
+                        ab_len += strlens(pubkey) + 1;
+
+                        memcpy(array_buf + ab_len, keypath, strlens(keypath) + 1);
+                        ab_len += strlens(keypath) + 1;
+                    }
+                }
+
+                // Terminate array serialization with null length
+                array_buf[ab_len++] = 0x00;
+                array_buf[ab_len++] = 0x00;
+
+                // Add array to buffer
+                buffer[b_len++] = (ab_len & 0xFF00) >> 8;
+                buffer[b_len++] = (ab_len & 0x00FF);
+                memcpy(buffer + b_len, array_buf, ab_len);
+                b_len += ab_len;
+            }
+        }
+    }
+    yajl_tree_free(json_node);
+    return b_len;
+}
+
+
 static void api_send_cmd(const char *command, PASSWORD_ID id)
 {
+    uint16_t len = 0;
+    char command_ser[COMMANDER_REPORT_SIZE];
+    memset(command_ser, 0, COMMANDER_REPORT_SIZE);
+
+    if (strlens(command)) {
+        len = api_serialize_json(command, command_ser);
+    }
+
+    if (len > COMMANDER_REPORT_SIZE) {
+        printf("\n\nError: Buffer too long.\n\n");
+        exit(1);
+    }
+
     memset(command_sent, 0, sizeof(command_sent));
     if (command) {
-        memcpy(command_sent, command, strlens(command));
+        memcpy(command_sent, command_ser, len);
     }
     if (!TEST_LIVE_DEVICE) {
-        utils_send_cmd(command, id);
+        utils_send_cmd(command_ser, len, id);
     }
 #ifndef CONTINUOUS_INTEGRATION
     else if (id == PASSWORD_NONE) {
-        api_hid_send(command);
+        api_hid_send_len(command_ser, len);
         api_hid_read(id);
     } else {
-        api_hid_send_encrypt(command, id);
+        api_hid_send_encrypt(command_ser, len, id);
         api_hid_read(id);
     }
 #endif
