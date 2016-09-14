@@ -73,6 +73,7 @@ endif()
 add_executable(tests_api tests_api.c ${WINDOWS-SOURCES})
 
 if(NOT CONTINUOUS_INTEGRATION)
+    include_directories(../src/drivers/config)
     if(WIN32)
         target_link_libraries(tests_api bitbox hidapi)
     else()

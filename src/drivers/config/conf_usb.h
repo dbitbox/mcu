@@ -36,9 +36,9 @@
 #define _CONF_USB_H_
 
 
+#ifndef TESTING
 #include "compiler.h"
 #include "../../version.h"
-
 
 #define U2F_MODE 1
 
@@ -105,6 +105,7 @@ extern char usb_serial_number[];
 // Keep these includes at the end of the file
 #include "udi_hid_generic_conf.h"
 #include "../../usb.h"
+#endif
 
 
 #endif // _CONF_USB_H_

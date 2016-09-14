@@ -46,13 +46,14 @@ static int TEST_LIVE_DEVICE = 0;
 #ifndef CONTINUOUS_INTEGRATION
 // http://www.signal11.us/oss/hidapi/
 #include <hidapi.h>
+#include "conf_usb.h"
 
 static hid_device *HID_HANDLE;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 
 static int api_hid_init(void)
 {
-    HID_HANDLE = hid_open(0x03eb, 0x2402, NULL);
+    HID_HANDLE = hid_open(USB_DEVICE_VENDOR_ID, USB_DEVICE_PRODUCT_ID, NULL);
     if (!HID_HANDLE) {
         return DBB_ERROR;
     }
