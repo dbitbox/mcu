@@ -24,6 +24,7 @@ set(DBB-FIRMWARE-SOURCES
         wallet.c
         flags.c
         sha2.c
+        u2f_device.c
 )
 
 if(USE_UECC_LIB)

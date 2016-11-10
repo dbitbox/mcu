@@ -35,11 +35,11 @@
 #include "commander.h"
 #include "ripemd160.h"
 #include "wallet.h"
-#include "random.h"
 #include "base58.h"
 #include "pbkdf2.h"
 #include "utils.h"
 #include "flags.h"
+#include "hmac.h"
 #include "sha2.h"
 #include "ecc.h"
 
@@ -86,6 +86,15 @@ uint8_t *wallet_get_chaincode(void)
     } else {
         return memory_chaincode(NULL);
     }
+}
+
+
+uint8_t *wallet_get_master_u2f(void)
+{
+    static uint8_t hmac[SHA256_DIGEST_LENGTH];
+    const uint8_t salt[] = {'U', '2', 'F', 's', 'a', 'l', 't'};
+    hmac_sha256(salt, sizeof(salt), memory_chaincode(NULL), 32, hmac);
+    return hmac;
 }
 
 
