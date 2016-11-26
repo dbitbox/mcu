@@ -31,48 +31,101 @@
 #include "commander.h"
 #include "mcu.h"
 #include "usb.h"
+#include "u2f_device.h"
 
 
-bool usb_b_enable = false;
+#define USB_QUEUE_NUM_PACKETS 128
+
+
+static uint8_t usb_reply_queue_packets[USB_QUEUE_NUM_PACKETS][USB_REPORT_SIZE];
+static uint32_t usb_reply_queue_index_start = 0;
+static uint32_t usb_reply_queue_index_end = 0;
+static bool usb_b_enable = false;
+
+
+static uint8_t *usb_reply_queue_read(void)
+{
+    uint32_t p = usb_reply_queue_index_start;
+    if (p == usb_reply_queue_index_end) {
+        return NULL;    // No data
+    }
+    usb_reply_queue_index_start = (p + 1) % USB_QUEUE_NUM_PACKETS;
+    return usb_reply_queue_packets[p];
+}
 
 
 void usb_report(const unsigned char *command)
 {
-    char *report = commander((const char *)command);
+    commander((const char *)command);
+}
+
+
+void usb_reply(uint8_t *report)
+{
     if (report) {
-        udi_hid_generic_send_report_in((uint8_t *)report);
+        if (udi_hid_generic_send_report_in(report)) {
+            return;
+        }
     }
 }
 
 
+void usb_reply_queue_clear(void)
+{
+    usb_reply_queue_index_start = usb_reply_queue_index_end;
+}
+
+
+void usb_reply_queue_add(const USB_FRAME *frame)
+{
+    uint32_t next = (usb_reply_queue_index_end + 1) % USB_QUEUE_NUM_PACKETS;
+    if (usb_reply_queue_index_start == next) {
+        return; // Buffer full
+    }
+    memcpy(usb_reply_queue_packets[usb_reply_queue_index_end], frame, USB_REPORT_SIZE);
+    usb_reply_queue_index_end = next;
+}
+
+
+void usb_reply_queue_send(void)
+{
+    static uint8_t *data;
+    data = usb_reply_queue_read();
+    if (data) {
+        usb_reply(data);
+    }
+}
+
+
+// Periodically called every 1(?) msec
+// Can run timed locked processes here
 void usb_process(uint16_t framenumber)
 {
     static uint8_t cpt_sof = 0;
 
-    // Scan process periodically
     cpt_sof++;
     if (cpt_sof < 40) {
         return;
     }
     cpt_sof = 0;
 
-    // Can run timed locked processes here
-    if (false) {
-        (void)framenumber; /* pass */
-    }
+    u2f_device_timeout();
+
+    (void)framenumber;
 }
+
 
 void usb_report_sent(void)
 {
+    usb_reply_queue_send();
 }
 
-void usb_suspend_action(void)
-{
-}
 
-void usb_resume_action(void)
-{
-}
+void usb_suspend_action(void) {}
+
+
+void usb_resume_action(void) {}
+
 
 void usb_sof_action(void)
 {
@@ -82,19 +135,19 @@ void usb_sof_action(void)
     usb_process(udd_get_frame_number());
 }
 
-void usb_remotewakeup_enable(void)
-{
-}
 
-void usb_remotewakeup_disable(void)
-{
-}
+void usb_remotewakeup_enable(void) {}
+
+
+void usb_remotewakeup_disable(void) {}
+
 
 bool usb_enable(void)
 {
     usb_b_enable = true;
     return true;
 }
+
 
 void usb_disable(void)
 {

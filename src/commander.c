@@ -30,6 +30,7 @@
 #include <stdio.h>
 
 #include "yajl/src/api/yajl_tree.h"
+#include "u2f_device.h"
 #include "commander.h"
 #include "version.h"
 #include "random.h"
@@ -45,6 +46,7 @@
 #include "ataes132.h"
 #include "touch.h"
 #include "mcu.h"
+#include "usb.h"
 #include "sd.h"
 #else
 #include "sham.h"
@@ -1645,15 +1647,26 @@ static int commander_check_init(const char *encrypted_command)
 //
 char *commander(const char *command)
 {
-    commander_clear_report();
-    if (commander_check_init(command) == DBB_OK) {
-        char *command_dec = commander_decrypt(command);
-        if (command_dec) {
-            commander_parse(command_dec);
-            free(command_dec);
-        }
+    if (U2F_MODE) {
+        ecc_set_curve(ECC_SECP256r1);
+        u2f_device_run((const void *)command);
+        return NULL;
     }
-    memory_clear();
-    return json_report;
+
+    else {
+        ecc_set_curve(ECC_SECP256k1);
+        commander_clear_report();
+        if (commander_check_init(command) == DBB_OK) {
+            char *command_dec = commander_decrypt(command);
+            if (command_dec) {
+                commander_parse(command_dec);
+                free(command_dec);
+            }
+        }
+        memory_clear();
+
+        usb_reply((uint8_t *)json_report);
+        return json_report;
+    }
 }
 

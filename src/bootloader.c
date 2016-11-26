@@ -312,6 +312,7 @@ void bootloader_jump(void)
 
 char *commander(const char *command)
 {
-    return bootloader(command);
+    usb_reply(bootloader(command));
+    return NULL;
 }
 

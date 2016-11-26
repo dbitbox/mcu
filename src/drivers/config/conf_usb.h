@@ -25,12 +25,22 @@
 */
 
 
+// TODO 
+//      -- make U2F and BTC modes compatible:
+//         report and commander buffer sizes, descriptors endpoints, communication protocol, etc.
+//         remove U2F_MODE define
+//
+
+
 #ifndef _CONF_USB_H_
 #define _CONF_USB_H_
 
 
 #include "compiler.h"
 #include "../../version.h"
+
+
+#define U2F_MODE 1
 
 
 // Device definition 
@@ -80,8 +90,13 @@ extern char usb_serial_number[];
 #define  UDI_HID_REPORT_IN_SIZE             256
 #define  UDI_HID_REPORT_OUT_SIZE            4098
 #else
-#define  UDI_HID_REPORT_IN_SIZE             4096
-#define  UDI_HID_REPORT_OUT_SIZE            4096
+#ifdef U2F_MODE
+#define  USB_REPORT_SIZE 64
+#else
+#define  USB_REPORT_SIZE 4096
+#endif
+#define  UDI_HID_REPORT_IN_SIZE             USB_REPORT_SIZE
+#define  UDI_HID_REPORT_OUT_SIZE            USB_REPORT_SIZE
 #endif
 #define  UDI_HID_REPORT_FEATURE_SIZE        8
 #define  UDI_HID_GENERIC_EP_SIZE            64
