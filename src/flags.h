@@ -28,6 +28,7 @@
 #ifndef _FLAGS_H_
 #define _FLAGS_H_
 
+#define MAX(a, b)  (((a) < (b)) ? (b) : (a))
 
 // Flash: 256kB = 512 pages * 512B per page
 #ifndef IFLASH0_ADDR
@@ -54,7 +55,7 @@
 #define COMMANDER_REPORT_SIZE       4096
 #endif
 #define COMMANDER_SIG_LEN           219// sig + pubkey + json encoding
-#define COMMANDER_ARRAY_MAX         (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2))
+#define COMMANDER_ARRAY_MAX         MAX(1, (COMMANDER_REPORT_SIZE - (COMMANDER_SIG_LEN / 2)))
 #define COMMANDER_ARRAY_ELEMENT_MAX 1024
 #define COMMANDER_MAX_ATTEMPTS      15// max PASSWORD or LOCK PIN attempts before device reset
 #define VERIFYPASS_FILENAME         "verification.txt"
