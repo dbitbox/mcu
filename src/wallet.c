@@ -300,18 +300,11 @@ err:
 }
 
 
-int wallet_sign(const char *message, const char *keypath)
+int wallet_sign(const uint8_t *data, const char *keypath)
 {
-    uint8_t data[32];
     uint8_t sig[64];
     uint8_t pub_key[33];
     HDNode node;
-
-    if (strlens(message) != (32 * 2)) {
-        commander_clear_report();
-        commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_SIGN_HASH_LEN);
-        goto err;
-    }
 
     if (wallet_seeded() != DBB_OK) {
         commander_clear_report();
@@ -325,8 +318,6 @@ int wallet_sign(const char *message, const char *keypath)
         commander_fill_report(cmd_str(CMD_sign), NULL, DBB_ERR_KEY_CHILD);
         goto err;
     }
-
-    memcpy(data, utils_hex_to_uint8(message), 32);
 
     if (ecc_sign_digest(node.private_key, data, sig)) {
         commander_clear_report();

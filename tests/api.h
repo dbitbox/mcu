@@ -96,6 +96,28 @@ static void api_hid_send_encrypt(const char *cmd, uint16_t len, PASSWORD_ID id)
 #endif
 
 
+static uint16_t api_ser_cmd(const char *command)
+{
+    int id;
+    for (id = 0; id < CMD_NUM; id++) {
+        if (strcmp(cmd_str(id), command) == 0) {
+            return cmd_instr(id);
+        }
+    }
+    return 0;
+}
+
+static uint16_t api_ser_attr(const char *attr)
+{
+    int id;
+    for (id = 0; id < ATTR_NUM; id++) {
+        if (strcmp(attr_str(id), attr) == 0) {
+            return attr_instr(id);
+        }
+    }
+    return 0;
+}
+
 static uint16_t api_serialize_json(const char *command, char *buffer)
 {
     yajl_val json_node = yajl_tree_parse(command, NULL, 0);
@@ -105,7 +127,7 @@ static uint16_t api_serialize_json(const char *command, char *buffer)
     uint16_t b_len = 0, ser_cmd;
 
     // Parent command
-    ser_cmd = flag_hash_16(cmd_parent);
+    ser_cmd = api_ser_cmd(cmd_parent);
     buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
     buffer[b_len++] = (ser_cmd & 0x00FF);
 
@@ -115,7 +137,7 @@ static uint16_t api_serialize_json(const char *command, char *buffer)
 
         if (strlens(cmd_val)) {
             // Add child command key
-            ser_cmd = flag_hash_16(cmd_str(CMD_value));
+            ser_cmd = cmd_instr(CMD_value);
             buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
             buffer[b_len++] = (ser_cmd & 0x00FF);
             // Child command value
@@ -131,7 +153,7 @@ static uint16_t api_serialize_json(const char *command, char *buffer)
             yajl_val arg_val = args->u.object.values[i];
 
             // Add child command key
-            ser_cmd = flag_hash_16(arg_key);
+            ser_cmd = api_ser_cmd(arg_key);
             buffer[b_len++] = (ser_cmd & 0xFF00) >> 8;
             buffer[b_len++] = (ser_cmd & 0x00FF);
 
@@ -155,14 +177,16 @@ static uint16_t api_serialize_json(const char *command, char *buffer)
                     const char *hash_path[] = { cmd_str(CMD_hash), NULL };
                     const char *keypath = YAJL_GET_STRING(yajl_tree_get(obj, keypath_path, yajl_t_string));
                     const char *hash = YAJL_GET_STRING(yajl_tree_get(obj, hash_path, yajl_t_string));
-
+                    uint8_t hash_d[32];
                     if (hash && keypath) {
-                        uint16_t len = strlens(hash) + 1 + strlens(keypath) + 1;// add 1s for null
+                        uint16_t len = sizeof(hash_d) + strlens(keypath) + 1;// add 1s for null
                         array_buf[ab_len++] = (len & 0xFF00) >> 8;
                         array_buf[ab_len++] = len & 0x00FF;
 
-                        memcpy(array_buf + ab_len, hash, strlens(hash) + 1);
-                        ab_len += strlens(hash) + 1;
+                        memset(hash_d, 0, sizeof(hash_d));
+                        memcpy(hash_d, utils_hex_to_uint8(hash), sizeof(hash_d));
+                        memcpy(array_buf + ab_len, hash_d, sizeof(hash_d));
+                        ab_len += sizeof(hash_d);
 
                         memcpy(array_buf + ab_len, keypath, strlens(keypath) + 1);
                         ab_len += strlens(keypath) + 1;

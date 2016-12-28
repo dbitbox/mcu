@@ -79,96 +79,96 @@
 #define CMD_TABLE \
 /* parent keys  */\
 /*  with touch  */\
-X(NO_CMD)          /* placeholder - keep first */\
-X(sign)           \
-X(seed)           \
-X(reset)          \
-X(password)       \
-X(bootloader)     \
-X(hidden_password)\
-X(REQUIRE_TOUCH)   /* placeholder - do not move */\
+X(NO_CMD, 0)          /* placeholder - keep first */\
+X(sign, 10)           \
+X(seed, 11)           \
+X(reset, 12)          \
+X(password, 13)       \
+X(bootloader, 14)     \
+X(hidden_password, 15)\
+X(REQUIRE_TOUCH, 0)   /* placeholder - do not move */\
 /* parent keys  */\
 /*  w/o touch   */\
-X(verifypass)     \
-X(led)            \
-X(xpub)           \
-X(name)           \
-X(ecdh)           \
-X(device)         \
-X(random)         \
-X(backup)         \
-X(aes256cbc)      \
-X(ping)           \
+X(verifypass, 16)     \
+X(led, 17)            \
+X(xpub, 18)           \
+X(name, 19)           \
+X(ecdh, 20)           \
+X(device, 21)         \
+X(random, 22)         \
+X(backup, 23)         \
+X(aes256cbc, 24)      \
+X(ping, 25)           \
 /*  child keys  */\
-X(source)         \
-X(entropy)        \
-X(raw)            \
-X(type)           \
-X(hash)           \
-X(data)           \
-X(meta)           \
-X(pubkey)         \
-X(checkpub)       \
-X(filename)       \
-X(keypath)        \
-X(present)        \
-X(decrypt)        \
-X(encrypt)        \
-X(script)         \
-X(value)          \
-X(erase)          \
-X(check)          \
-X(key)            \
-X(sig)            \
-X(pin)            \
+X(source, 26)         \
+X(entropy, 27)        \
+X(raw, 28)            \
+X(type, 29)           \
+X(hash, 30)           \
+X(data, 31)           \
+X(meta, 32)           \
+X(pubkey, 33)         \
+X(checkpub, 34)       \
+X(filename, 35)       \
+X(keypath, 36)        \
+X(present, 37)        \
+X(decrypt, 38)        \
+X(encrypt, 39)        \
+X(script, 40)         \
+X(value, 41)          \
+X(erase, 42)          \
+X(check, 43)          \
+X(key, 44)            \
+X(sig, 45)            \
+X(pin, 46)            \
 /*  reply keys  */\
-X(ciphertext)     \
-X(echo)           \
-X(TFA)            \
-X(sham)           \
-X(input)          \
-X(ataes)          \
-X(touchbutton)    \
-X(warning)        \
-X(NUM)             /* keep last */
+X(ciphertext, 47)     \
+X(echo, 48)           \
+X(TFA, 49)            \
+X(sham, 50)           \
+X(input, 51)          \
+X(ataes, 52)          \
+X(touchbutton, 53)    \
+X(warning, 54)        \
+X(NUM, 0)             /* keep last */
 
 
 // Attributes
 #define ATTR_TABLE \
-X(success)        \
-X(error)          \
-X(accept)         \
-X(aborted)        \
-X(meta)           \
-X(list)           \
-X(sdcard)         \
-X(lock)           \
-X(bootlock)       \
-X(unlock)         \
-X(decrypt)        \
-X(encrypt)        \
-X(verify)         \
-X(true)           \
-X(false)          \
-X(erase)          \
-X(abort)          \
-X(blink)          \
-X(pseudo)         \
-X(create)         \
-X(backup)         \
-X(export)         \
-X(xpub)           \
-X(id)             \
-X(name)           \
-X(info)           \
-X(seeded)         \
-X(serial)         \
-X(version)        \
-X(password)       \
-X(TFA)            \
-X(__ERASE__)      \
-X(__FORCE__)      \
-X(NUM)             /* keep last */
+X(success, 10)        \
+X(error, 11)          \
+X(accept, 12)         \
+X(aborted, 13)        \
+X(meta, 14)           \
+X(list, 15)           \
+X(sdcard, 16)         \
+X(lock, 17)           \
+X(bootlock, 18)       \
+X(unlock, 19)         \
+X(decrypt, 20)        \
+X(encrypt, 21)        \
+X(verify, 22)         \
+X(true, 23)           \
+X(false, 24)          \
+X(erase, 25)          \
+X(abort, 26)          \
+X(blink, 27)          \
+X(pseudo, 28)         \
+X(create, 29)         \
+X(backup, 30)         \
+X(export, 31)         \
+X(xpub, 32)           \
+X(id, 33)             \
+X(name, 34)           \
+X(info, 35)           \
+X(seeded, 36)         \
+X(serial, 37)         \
+X(version, 38)        \
+X(password, 39)       \
+X(TFA, 40)            \
+X(__ERASE__, 41)      \
+X(__FORCE__, 42)      \
+X(NUM, 0)             /* keep last */
 
 
 // Status and error flags
@@ -250,11 +250,11 @@ X(WARN_SD_NUM_FILES,   902, "Too many backup files to read. The list is truncate
 X(FLAG_NUM,              0, 0)/* keep last */
 
 
-#define X(a) CMD_ ## a,
+#define X(a, b) CMD_ ## a,
 enum CMD_ENUM { CMD_TABLE };
 #undef X
 
-#define X(a) ATTR_ ## a,
+#define X(a, b) ATTR_ ## a,
 enum CMD_ATTR_ENUM { ATTR_TABLE };
 #undef X
 
@@ -264,7 +264,9 @@ enum FLAG_ENUM { FLAG_TABLE };
 
 
 const char *cmd_str(int cmd);
+uint16_t cmd_instr(enum CMD_ENUM enum_index);
 const char *attr_str(int attr);
+uint16_t attr_instr(enum CMD_ATTR_ENUM enum_index);
 const char *flag_code(int flag);
 const char *flag_msg(int flag);
 uint16_t flag_hash_16(const char *input);
