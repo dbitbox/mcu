@@ -561,6 +561,7 @@ static void tests_device(void)
     u_assert_str_has_not(api_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(api_read_decrypted_report(), "\"seeded\":true");
     u_assert_str_has(api_read_decrypted_report(), "\"lock\":true");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
     if (!TEST_LIVE_DEVICE) {
         yajl_val json_node = yajl_tree_parse(api_read_decrypted_report(), NULL, 0);
         const char *ciphertext_path[] = { cmd_str(CMD_device), attr_str(ATTR_TFA), (const char *) 0 };
@@ -574,6 +575,29 @@ static void tests_device(void)
         free(dec);
         yajl_tree_free(json_node);
     }
+
+    api_format_send_cmd(cmd_str(CMD_featureset), "{\"U2F\" : true}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":true");
+
+    api_format_send_cmd(cmd_str(CMD_featureset), "{\"U2F\" : false}", PASSWORD_STAND);
+    u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
+
+    api_format_send_cmd(cmd_str(CMD_featureset), "{}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_featureset), "{\"Foo\": true}", PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_featureset), "{\"U2F\" : true, \"Foo\": true}",
+                        PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), attr_str(ATTR_error));
+
+    api_format_send_cmd(cmd_str(CMD_device), attr_str(ATTR_info), PASSWORD_STAND);
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
 
     api_reset_device();
 
@@ -591,6 +615,7 @@ static void tests_device(void)
     u_assert_str_has(api_read_decrypted_report(), "\"id\":\"\"");
     u_assert_str_has(api_read_decrypted_report(), "\"seeded\":false");
     u_assert_str_has(api_read_decrypted_report(), "\"lock\":false");
+    u_assert_str_has(api_read_decrypted_report(), "\"U2F\":false");
 
     api_format_send_cmd(cmd_str(CMD_bootloader), attr_str(ATTR_unlock), PASSWORD_STAND);
     u_assert_str_has_not(api_read_decrypted_report(), attr_str(ATTR_error));

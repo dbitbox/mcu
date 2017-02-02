@@ -417,27 +417,33 @@ static void u2f_device_cmd_cont(const USB_FRAME *f)
 
     u2f_state_continue = false;
 
-    // Received all data
-    switch (reader->cmd) {
-        case U2FHID_PING:
-            u2f_device_ping(reader->buf, reader->len);
-            break;
-        case U2FHID_MSG:
-            u2f_device_msg((USB_APDU *)reader->buf, reader->len);
-            break;
-        case U2FHID_WINK:
-            u2f_device_wink(reader->buf, reader->len);
-            break;
-        case HWW_COMMAND:
-            ecc_set_curve(ECC_SECP256k1);
-            reader->buf[MIN(reader->len,
-                            sizeof(reader->buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
-            char *report = commander((const char *)reader->buf);
-            usb_reply_queue_load_msg(HWW_COMMAND, (const uint8_t *)report, strlens(report), cid);
-            break;
-        default:
-            u2f_send_err_hid(cid, ERR_INVALID_CMD);
-            break;
+    /* memory_extflag_read uses caching in order to response fast enought < 0.075s */
+    if ((memory_extflag_read() & EXT_FLAG_U2F) && reader->cmd != HWW_COMMAND) {
+        // if the U2F bit (==U2F disabled) is set and we do not process a HWW command, abort
+        u2f_send_err_hid(cid, ERR_INVALID_CMD);
+    } else {
+        // Received all data
+        switch (reader->cmd) {
+            case U2FHID_PING:
+                u2f_device_ping(reader->buf, reader->len);
+                break;
+            case U2FHID_MSG:
+                u2f_device_msg((USB_APDU *)reader->buf, reader->len);
+                break;
+            case U2FHID_WINK:
+                u2f_device_wink(reader->buf, reader->len);
+                break;
+            case HWW_COMMAND:
+                ecc_set_curve(ECC_SECP256k1);
+                reader->buf[MIN(reader->len,
+                                sizeof(reader->buf) - 1)] = '\0';// NULL terminate// FIXME - needed?
+                char *report = commander((const char *)reader->buf);
+                usb_reply_queue_load_msg(HWW_COMMAND, (const uint8_t *)report, strlens(report), cid);
+                break;
+            default:
+                u2f_send_err_hid(cid, ERR_INVALID_CMD);
+                break;
+        }
     }
 
     // Finished

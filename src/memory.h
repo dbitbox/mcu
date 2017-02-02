@@ -41,6 +41,7 @@
 #define MEM_ACCESS_ERR_ADDR             0x0004
 #define MEM_PIN_ERR_ADDR                0x0006
 #define MEM_UNLOCKED_ADDR               0x0008
+#define MEM_EXT_FLAGS_ADDR              0x000A //(uint32_t) 32 possible extension flags
 #define MEM_U2F_COUNT_ADDR              0x0010
 #define MEM_NAME_ADDR                   0x0100// Zone 1
 #define MEM_MASTER_BIP32_ADDR           0x0200
@@ -57,7 +58,9 @@
 #define DEFAULT_unlocked  0xFF
 #define DEFAULT_erased    0xFF
 #define DEFAULT_setup     0xFF
+#define DEFAULT_ext_flags 0xFFFFFFFF
 
+#define EXT_FLAG_U2F 0x00000001 //extension flag to enable/disable U2F
 
 typedef enum PASSWORD_ID {
     PASSWORD_STAND,
@@ -103,5 +106,7 @@ uint16_t memory_read_pin_err_count(void);
 uint32_t memory_u2f_count_iter(void);
 uint32_t memory_u2f_count_read(void);
 
+void memory_extflag_write(uint32_t flags);
+uint32_t memory_extflag_read(void);
 
 #endif  // _MEMORY_H_
