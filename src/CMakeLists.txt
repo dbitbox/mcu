@@ -26,25 +26,14 @@ set(DBB-FIRMWARE-SOURCES
         sha2.c
         u2f_device.c
         usb.c
-)
-
-if(USE_UECC_LIB)
-    set(DBB-FIRMWARE-SOURCES
-        ${DBB-FIRMWARE-SOURCES}
         uECC.c
-    )
-else()
-    set(DBB-FIRMWARE-SOURCES
-        ${DBB-FIRMWARE-SOURCES}
         secp256k1.c
-    )
-endif()
+)
 
 set(DBB-BOOTLOADER-SOURCES
         startup.c
         bootloader.c
         led.c
-        ecc.c
         uECC.c
         sha2.c
         utils.c
