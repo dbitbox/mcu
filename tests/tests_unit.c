@@ -438,7 +438,6 @@ static void test_bip32_vector_2(void)
 }
 
 
-#ifdef ECC_USE_UECC_LIB
 #define test_deterministic(KEY, MSG, K) do { \
     sha256_Raw((const uint8_t *)MSG, strlen(MSG), buf); \
     res = uECC_generate_k_rfc6979(k, utils_hex_to_uint8(KEY), buf, 32, &ctx.uECC, uECC_secp256k1()); \
@@ -471,7 +470,6 @@ static void test_rfc6979(void)
                        "There is a computer disease that anybody who works with computers knows about. It's a very serious disease and it interferes completely with the work. The trouble with computers is that you 'play' with them!",
                        "1f4b84c23a86a221d233f2521be018d9318639d5b8bbd6374a8a59232d16ad3d");
 }
-#endif
 
 
 // generated using http://althenia.net/svn/stackoverflow/pbkdf2-test-vectors.py?rev=6
@@ -525,7 +523,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("c55ece858b0ddd5263f96810fe14437cd3b5e1fbd7c6a2ec1e031f05e86d8bd5"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -533,7 +531,7 @@ static void test_sign_speed(void)
            utils_hex_to_uint8("509a0382ff5da48e402967a671bdcde70046d07f0df52cff12e8e3883b426a0a"),
            32);
     for (i = 0 ; i < N; i++) {
-        res = ecc_sign(priv_key, msg, sizeof(msg), sig);
+        res = ecc_sign(priv_key, msg, sizeof(msg), sig, ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -564,9 +562,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -581,9 +579,9 @@ static void test_verify_speed(void)
            65);
 
     for (i = 0 ; i < 25; i++) {
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
-        res = ecc_verify(pub_key65, sig, msg, sizeof(msg));
+        res = ecc_verify(pub_key65, sig, msg, sizeof(msg), ECC_SECP256k1);
         u_assert_int_eq(res, 0);
     }
 
@@ -607,13 +605,13 @@ static void test_ecdh(void)
         random_bytes(privkey_2, sizeof(privkey_2), 0);
         u_assert_mem_not_eq(privkey_1, privkey_2, 32);
 
-        ecc_get_public_key33(privkey_1, pubkey_1);
-        ecc_get_public_key33(privkey_2, pubkey_2);
+        ecc_get_public_key33(privkey_1, pubkey_1, ECC_SECP256k1);
+        ecc_get_public_key33(privkey_2, pubkey_2, ECC_SECP256k1);
 
-        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1);
+        ecc_ecdh(pubkey_1, privkey_2, ecdh_secret_1, ECC_SECP256k1);
         u_assert_mem_not_eq(ecdh_secret_1, ecdh_secret_2, 32);
 
-        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2);
+        ecc_ecdh(pubkey_2, privkey_1, ecdh_secret_2, ECC_SECP256k1);
         u_assert_mem_eq(ecdh_secret_1, ecdh_secret_2, 32);
     }
 }
@@ -1015,10 +1013,8 @@ int main(void)
     u_run_test(test_aes_cbc);
     u_run_test(test_buffer_overflow);
     u_run_test(test_utils);
-#ifdef ECC_USE_UECC_LIB
     // unit tests for secp256k1 rfc6979 are in tests_secp256k1.c
     u_run_test(test_rfc6979);
-#endif
 
     if (!U_TESTS_FAIL) {
         printf("\nALL %i TESTS PASSED\n\n", U_TESTS_RUN);
@@ -1027,5 +1023,8 @@ int main(void)
     }
 
     ecc_context_destroy();
+#ifdef ECC_USE_SECP256K1_LIB
+    bitcoin_ecc.ecc_context_destroy();
+#endif
     return U_TESTS_FAIL;
 }
