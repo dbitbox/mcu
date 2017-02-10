@@ -32,32 +32,40 @@
 #include <stdint.h>
 
 
-#ifdef ECC_USE_UECC_LIB
 typedef enum ecc_curve_id {
-    ECC_SECP256k1,
-    ECC_SECP256r1,
+    ECC_CURVE_libsecp256k1,
+    ECC_CURVE_uECC_secp256k1,
+    ECC_CURVE_uECC_nist_p,
 } ecc_curve_id;
 
-void ecc_set_curve(ecc_curve_id curve);
-int ecc_sig_to_der(const uint8_t *sig, uint8_t *der);
+
+#ifdef ECC_USE_UECC_LIB
+#define ECC_CURVE_BITCOIN ECC_CURVE_uECC_secp256k1
+#else
+#define ECC_CURVE_BITCOIN ECC_CURVE_libsecp256k1
 #endif
+
 
 void ecc_context_init(void);
 void ecc_context_destroy(void);
-int ecc_sign_digest(const uint8_t *private_key, const uint8_t *data, uint8_t *sig);
-int ecc_sign(const uint8_t *private_key, const uint8_t *msg, uint32_t msg_len,
-             uint8_t *sig);
-int ecc_sign_double(const uint8_t *privateKey, const uint8_t *msg, uint32_t msg_len,
+int ecc_sign_digest(const ecc_curve_id, const uint8_t *private_key, const uint8_t *data,
                     uint8_t *sig);
-int ecc_verify(const uint8_t *public_key, const uint8_t *signature, const uint8_t *msg,
-               uint32_t msg_len);
-int ecc_generate_private_key(uint8_t *private_child, const uint8_t *private_master,
-                             const uint8_t *z);
-int ecc_isValid(uint8_t *private_key);
-void ecc_get_public_key65(const uint8_t *private_key, uint8_t *public_key);
-void ecc_get_public_key33(const uint8_t *private_key, uint8_t *public_key);
-int ecc_ecdh(const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
+int ecc_sign(const ecc_curve_id, const uint8_t *private_key, const uint8_t *msg,
+             uint32_t msg_len, uint8_t *sig);
+int ecc_sign_double(const ecc_curve_id, const uint8_t *privateKey, const uint8_t *msg,
+                    uint32_t msg_len, uint8_t *sig);
+int ecc_verify(const ecc_curve_id, const uint8_t *public_key, const uint8_t *signature,
+               const uint8_t *msg, uint32_t msg_len);
+int ecc_generate_private_key(const ecc_curve_id, uint8_t *private_child,
+                             const uint8_t *private_master, const uint8_t *z);
+int ecc_isValid(const ecc_curve_id, uint8_t *private_key);
+void ecc_get_public_key65(const ecc_curve_id, const uint8_t *private_key,
+                          uint8_t *public_key);
+void ecc_get_public_key33(const ecc_curve_id, const uint8_t *private_key,
+                          uint8_t *public_key);
+int ecc_ecdh(const ecc_curve_id, const uint8_t *pair_pubkey, const uint8_t *rand_privkey,
              uint8_t *ecdh_secret);
+int ecc_sig_to_der(const uint8_t *sig, uint8_t *der);
 
 
 #endif

@@ -34,7 +34,7 @@
 #include "utils.h"
 
 
-static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup)
+static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup, ecc_curve_id curve)
 {
     uint8_t sig[64], pub_key33[33], pub_key65[65], priv_key[32], msg[256], buffer[1000],
             hash[32], msg_len = 0, *p;
@@ -78,24 +78,24 @@ static int run_test(unsigned long max_iterations, EC_GROUP *ecgroup)
             }
         }
 
-        if (ecc_sign(priv_key, msg, msg_len, sig)) {
+        if (ecc_sign(curve, priv_key, msg, msg_len, sig)) {
             printf("signing failed\n");
             err++;
             break;
         }
 
         // generate public key from private key
-        ecc_get_public_key33(priv_key, pub_key33);
-        ecc_get_public_key65(priv_key, pub_key65);
+        ecc_get_public_key33(curve, priv_key, pub_key33);
+        ecc_get_public_key65(curve, priv_key, pub_key65);
 
 
         // verify the message signature
-        if (ecc_verify(pub_key65, sig, msg, msg_len)) {
+        if (ecc_verify(curve, pub_key65, sig, msg, msg_len)) {
             printf("verification failed (pub_key_len = 65)\n");
             err++;
             break;
         }
-        if (ecc_verify(pub_key33, sig, msg, msg_len)) {
+        if (ecc_verify(curve, pub_key33, sig, msg, msg_len)) {
             printf("verification failed (pub_key_len = 33)\n");
             err++;
             break;
@@ -150,24 +150,15 @@ int main(int argc, char *argv[])
         puts("Zero or one command-line arguments only, exiting....");
     }
 
-#ifdef ECC_USE_UECC_LIB
     printf("\nTesting curve secp256k1\n");
-    ecc_set_curve(ECC_SECP256k1);
     ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    err += run_test(max_iterations, ecgroup);
+    err += run_test(max_iterations, ecgroup, ECC_CURVE_BITCOIN);
     EC_GROUP_free(ecgroup);
 
     printf("\nTesting curve secp256r1\n");
-    ecc_set_curve(ECC_SECP256r1);
     ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-    err += run_test(max_iterations, ecgroup);
+    err += run_test(max_iterations, ecgroup, ECC_CURVE_uECC_nist_p);
     EC_GROUP_free(ecgroup);
-#else
-    // secp256k1 library does not have secp256r1 functionality
-    ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    err += run_test(max_iterations, ecgroup);
-    EC_GROUP_free(ecgroup);
-#endif
 
     ecc_context_destroy();
     return err;

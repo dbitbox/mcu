@@ -704,7 +704,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         return DBB_ERROR;
     }
 
-    if (ecc_ecdh(pair_pubkey, rand_privkey, ecdh_secret)) {
+    if (ecc_ecdh(ECC_CURVE_BITCOIN, pair_pubkey, rand_privkey, ecdh_secret)) {
         commander_fill_report(cmd_str(cmd), NULL, DBB_ERR_KEY_ECDH);
         return DBB_ERROR;
     }
@@ -739,7 +739,7 @@ static int commander_process_ecdh(int cmd, const uint8_t *pair_pubkey,
         return ret;
     }
 
-    ecc_get_public_key33(rand_privkey, out_pubkey);
+    ecc_get_public_key33(ECC_CURVE_BITCOIN, rand_privkey, out_pubkey);
     utils_zero(rand_privkey, sizeof(rand_privkey));
     utils_zero(ecdh_secret, sizeof(ecdh_secret));
     utils_clear_buffers();
