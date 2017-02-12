@@ -1471,7 +1471,7 @@ static void run_utests(void)
     }
 }
 
-
+#ifndef __APPLE__
 uint32_t __stack_chk_guard = 0;
 
 extern void __attribute__((noreturn)) __stack_chk_fail(void);
@@ -1480,14 +1480,16 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
     printf("\n\nError: stack smashing detected!\n\n");
     abort();
 }
-
+#endif
 
 int main(void)
 {
     // Test the C code API
     TEST_LIVE_DEVICE = 0;
     random_init();
+#ifndef __APPLE__
     __stack_chk_guard = random_uint32(0);
+#endif
     ecc_context_init();
 #ifdef ECC_USE_SECP256K1_LIB
     bitcoin_ecc.ecc_context_init();
