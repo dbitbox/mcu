@@ -63,7 +63,9 @@ extern char usb_serial_number[];
 #define  UDC_RESUME_EVENT()               usb_resume_action()
 #define  UDC_REMOTEWAKEUP_ENABLE()        usb_remotewakeup_enable()
 #define  UDC_REMOTEWAKEUP_DISABLE()       usb_remotewakeup_disable()
- 
+#define  UDC_GET_EXTRA_STRING()           usb_extra_string()
+
+
 
 #ifdef BOOTLOADER 
 #define  UDI_HID_REPORT_IN_SIZE      256
@@ -82,6 +84,7 @@ extern char usb_serial_number[];
 #define  UDI_HWW_ENABLE_EXT()        usb_hww_enable()
 #define  UDI_HWW_DISABLE_EXT()       usb_hww_disable()
 #define  UDI_HWW_REPORT_OUT(ptr)     usb_hww_report(ptr)
+#define  UDI_HWW_STRING_ID           1
 
 
 #define  UDI_U2F_IFACE_NUMBER        1
@@ -91,10 +94,26 @@ extern char usb_serial_number[];
 #define  UDI_U2F_DISABLE_EXT()       usb_u2f_disable()
 #define  UDI_U2F_REPORT_OUT(ptr)     usb_u2f_report(ptr)
 #define  UDI_U2F_REPORT_SENT()       usb_u2f_report_sent()
+#define  UDI_U2F_STRING_ID           2
 
 
 #define  UDI_HID_REPORT_SENT()       usb_report_sent()
 #define  UDI_HID_SET_FEATURE(report) usb_set_feature(report)
+
+
+
+/**
+ * Configuration of MSC interface
+ */
+#define  UDI_MSC_IFACE_NUMBER            2
+#define  UDI_MSC_EP_IN                   (5 | USB_EP_DIR_IN)// FIXME -  was 1 and 2 - might be important...
+#define  UDI_MSC_EP_OUT                  (6 | USB_EP_DIR_OUT)
+#define  UDI_MSC_GLOBAL_VENDOR_ID        'A', 'T', 'M', 'E', 'L', ' ', ' ', ' '
+#define  UDI_MSC_GLOBAL_PRODUCT_VERSION  '1', '.', '0', '0'
+#define  UDI_MSC_ENABLE_EXT()            usb_msc_enable()
+#define  UDI_MSC_DISABLE_EXT()           usb_msc_disable()
+#define  UDI_MSC_STRING_ID               3
+
 
 
 // Interface descriptor structure for HID generic
@@ -115,17 +134,18 @@ typedef struct {
 #define  UDI_COMPOSITE_API              &udi_api_hww
 #else
 #define  USB_DEVICE_EP_CTRL_SIZE       64
-#define  USB_DEVICE_NB_INTERFACE       2
-#define  USB_DEVICE_MAX_EP             4
-#define  UDI_COMPOSITE_DESC_T           udi_hid_generic_desc_t hid_hww; udi_hid_generic_desc_t hid_u2f
-#define  UDI_COMPOSITE_DESC             .hid_hww = UDI_HWW_DESC, .hid_u2f = UDI_U2F_DESC
-#define  UDI_COMPOSITE_API              &udi_api_hww, &udi_api_u2f
+#define  USB_DEVICE_NB_INTERFACE       3
+#define  USB_DEVICE_MAX_EP             6
+#define  UDI_COMPOSITE_DESC_T           udi_hid_generic_desc_t hid_hww; udi_hid_generic_desc_t hid_u2f; udi_msc_desc_t udi_msc
+#define  UDI_COMPOSITE_DESC             .hid_hww = UDI_HWW_DESC, .hid_u2f = UDI_U2F_DESC, .udi_msc = UDI_MSC_DESC
+#define  UDI_COMPOSITE_API              &udi_api_hww, &udi_api_u2f, &udi_api_msc
 #endif
 
 
 // Keep these includes at the end of the file
 #include "udi_hid_hww.h"
 #include "udi_hid_u2f.h"
+#include "udi_msc.h"
 
 
 #endif

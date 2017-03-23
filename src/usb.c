@@ -43,6 +43,7 @@
 
 static bool usb_hww_enabled = false;
 static bool usb_u2f_enabled = false;
+static bool usb_msc_enabled = false;
 static uint8_t usb_hww_interface_occupied = 0;
 static uint8_t usb_reply_queue_packets[USB_QUEUE_NUM_PACKETS][USB_REPORT_SIZE];
 static uint32_t usb_reply_queue_index_start = 0;
@@ -219,6 +220,19 @@ void usb_hww_disable(void)
 }
 
 
+bool usb_msc_enable(void)
+{
+    usb_msc_enabled = true;
+    return true;
+}
+
+
+void usb_msc_disable(void)
+{
+    usb_msc_enabled = false;
+}
+
+
 // Periodically called every 1(?) msec
 // Can run timed locked processes here
 // Use for u2f timeout function
@@ -241,9 +255,71 @@ void usb_process(uint16_t framenumber)
 void usb_sof_action(void)
 {
 #if !defined(BOOTLOADER) && !defined(TESTING)
+    if (usb_msc_enabled) {
+        udi_msc_process_trans();// FIXME - not sure if should be here. located in main loop in example code
+    }
+
     if (!usb_u2f_enabled) {
         return;
     }
     usb_process(udd_get_frame_number());
 #endif
+}
+
+
+bool usb_extra_string(void)
+{
+#ifndef TESTING
+    static uint8_t udi_hid_hww_name[] = "HID HWW interface";
+    static uint8_t udi_hid_u2f_name[] = "HID U2F interface";
+    static uint8_t udi_msc_name[] = "MSC interface";
+
+    struct extra_strings_desc_t {
+        usb_str_desc_t header;
+        le16_t string[Max(Max( \
+                               sizeof(udi_hid_hww_name) - 1, \
+                               sizeof(udi_hid_u2f_name) - 1), \
+                          sizeof(udi_msc_name) - 1)];
+    };
+    static UDC_DESC_STORAGE struct extra_strings_desc_t extra_strings_desc = {
+        .header.bDescriptorType = USB_DT_STRING
+    };
+
+    uint8_t i;
+    uint8_t *str;
+    uint8_t str_lgt = 0;
+
+    // Link payload pointer to the string corresponding at request
+    switch (udd_g_ctrlreq.req.wValue & 0xff) {
+        case UDI_MSC_STRING_ID:
+            str_lgt = sizeof(udi_msc_name) - 1;
+            str = udi_msc_name;
+            break;
+        case UDI_HWW_STRING_ID:
+            str_lgt = sizeof(udi_hid_hww_name) - 1;
+            str = udi_hid_hww_name;
+            break;
+        case UDI_U2F_STRING_ID:
+            str_lgt = sizeof(udi_hid_u2f_name) - 1;
+            str = udi_hid_u2f_name;
+            break;
+        default:
+            return false;
+    }
+
+    if (str_lgt != 0) {
+        for ( i = 0; i < str_lgt; i++) {
+            extra_strings_desc.string[i] = cpu_to_le16((le16_t)str[i]);
+        }
+        extra_strings_desc.header.bLength = 2 + (str_lgt) * 2;
+        udd_g_ctrlreq.payload_size = extra_strings_desc.header.bLength;
+        udd_g_ctrlreq.payload = (uint8_t *) &extra_strings_desc;
+    }
+
+    // if the string is larger than request length, then cut it
+    if (udd_g_ctrlreq.payload_size > udd_g_ctrlreq.req.wLength) {
+        udd_g_ctrlreq.payload_size = udd_g_ctrlreq.req.wLength;
+    }
+#endif
+    return true;
 }

@@ -31,6 +31,8 @@
 
 #define SD_MMC_ENABLE
 #define ACCESS_MEM_TO_RAM_ENABLED
+#define ACCESS_USB_ENABLED
+
 
 #define CONF_BOARD_TWI0
 

@@ -85,6 +85,7 @@ set(DRIVER-SOURCES
         drivers/common/services/sleepmgr/sam/sleepmgr.c 
         drivers/common/services/spi/sam_spi/spi_master.c 
         drivers/common/services/storage/ctrl_access/ctrl_access.c 
+        drivers/common/services/usb/class/msc/device/udi_msc.c 
         drivers/common/services/usb/class/hid/device/udi_hid.c 
         drivers/common/services/usb/class/hid/device/u2f/udi_hid_u2f.c 
         drivers/common/services/usb/class/hid/device/hww/udi_hid_hww.c 
@@ -142,6 +143,8 @@ set(DRIVER-INCLUDES
         drivers/common/services/usb/class/hid/device/u2f
         drivers/common/services/usb/class/hid/device/hww
         drivers/common/services/usb/class/composite/device
+        drivers/common/services/usb/class/msc
+        drivers/common/services/usb/class/msc/device
         drivers/common/services/usb/udc
         drivers/common/utils
         drivers/common/utils/stdio/stdio_serial
