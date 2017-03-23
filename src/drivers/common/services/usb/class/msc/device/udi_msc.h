@@ -59,22 +59,10 @@
 extern UDC_DESC_STORAGE udi_api_t udi_api_msc;
 
 
-// Interface descriptor structure for MSC
-typedef struct {
-	usb_iface_desc_t iface;
-	usb_ep_desc_t ep_in;
-	usb_ep_desc_t ep_out;
-} udi_msc_desc_t;
-
-
 // By default no string associated to this interface
 #ifndef UDI_MSC_STRING_ID
 #define UDI_MSC_STRING_ID     0
 #endif
-
-
-// MSC endpoints size for full speed
-#define UDI_MSC_EPS_SIZE_FS   64
 
 
 // Content of MSC interface descriptor for full speed
@@ -92,13 +80,13 @@ typedef struct {
    .ep_in.bDescriptorType     = USB_DT_ENDPOINT,\
    .ep_in.bEndpointAddress    = UDI_MSC_EP_IN,\
    .ep_in.bmAttributes        = USB_EP_TYPE_BULK,\
-   .ep_in.wMaxPacketSize      = LE16(UDI_MSC_EPS_SIZE_FS),\
+   .ep_in.wMaxPacketSize      = LE16(UDI_MSC_EP_SIZE),\
    .ep_in.bInterval           = 0,\
    .ep_out.bLength            = sizeof(usb_ep_desc_t),\
    .ep_out.bDescriptorType    = USB_DT_ENDPOINT,\
    .ep_out.bEndpointAddress   = UDI_MSC_EP_OUT,\
    .ep_out.bmAttributes       = USB_EP_TYPE_BULK,\
-   .ep_out.wMaxPacketSize     = LE16(UDI_MSC_EPS_SIZE_FS),\
+   .ep_out.wMaxPacketSize     = LE16(UDI_MSC_EP_SIZE),\
    .ep_out.bInterval          = 0,\
    }
 

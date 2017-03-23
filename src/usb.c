@@ -233,6 +233,17 @@ void usb_msc_disable(void)
 }
 
 
+void usb_msc_notify_trans(void)
+{
+#if !defined(BOOTLOADER) && !defined(TESTING)
+    //////if (usb_msc_enabled) {
+    udi_msc_process_trans();// FIXME - not sure if should be here. located in main loop in example code
+    //////}
+
+    //////wakeup_my_task();
+#endif
+}
+
 // Periodically called every 1(?) msec
 // Can run timed locked processes here
 // Use for u2f timeout function
@@ -255,10 +266,6 @@ void usb_process(uint16_t framenumber)
 void usb_sof_action(void)
 {
 #if !defined(BOOTLOADER) && !defined(TESTING)
-    if (usb_msc_enabled) {
-        udi_msc_process_trans();// FIXME - not sure if should be here. located in main loop in example code
-    }
-
     if (!usb_u2f_enabled) {
         return;
     }
@@ -269,7 +276,7 @@ void usb_sof_action(void)
 
 bool usb_extra_string(void)
 {
-#ifndef TESTING
+#if !defined(BOOTLOADER) && !defined(TESTING)
     static uint8_t udi_hid_hww_name[] = "HID HWW interface";
     static uint8_t udi_hid_u2f_name[] = "HID U2F interface";
     static uint8_t udi_msc_name[] = "MSC interface";

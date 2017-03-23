@@ -92,6 +92,8 @@ int main (void)
         usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH - 1] = '-';
     }
 
+    sd_mmc_init();// FIXME needed here? interferes with sd library? likely
+
     usb_suspend_action();
     udc_start();
 

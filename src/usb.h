@@ -92,6 +92,7 @@ void usb_u2f_report(const unsigned char *command);
 
 bool usb_msc_enable(void);
 void usb_msc_disable(void);
+void usb_msc_notify_trans(void);
 
 bool usb_extra_string(void);
 

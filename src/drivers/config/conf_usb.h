@@ -78,42 +78,39 @@ extern char usb_serial_number[];
 #define  UDI_HID_EP_SIZE             64
 
 
-#define  UDI_HWW_IFACE_NUMBER         0
+#define  UDI_HWW_IFACE_NUMBER        0
+#define  UDI_HWW_STRING_ID           1
 #define  UDI_HWW_EP_IN               (1 | USB_EP_DIR_IN)
 #define  UDI_HWW_EP_OUT              (2 | USB_EP_DIR_OUT)
 #define  UDI_HWW_ENABLE_EXT()        usb_hww_enable()
 #define  UDI_HWW_DISABLE_EXT()       usb_hww_disable()
 #define  UDI_HWW_REPORT_OUT(ptr)     usb_hww_report(ptr)
-#define  UDI_HWW_STRING_ID           1
 
 
 #define  UDI_U2F_IFACE_NUMBER        1
+#define  UDI_U2F_STRING_ID           2
 #define  UDI_U2F_EP_IN               (3 | USB_EP_DIR_IN)
 #define  UDI_U2F_EP_OUT              (4 | USB_EP_DIR_OUT)
 #define  UDI_U2F_ENABLE_EXT()        usb_u2f_enable()
 #define  UDI_U2F_DISABLE_EXT()       usb_u2f_disable()
 #define  UDI_U2F_REPORT_OUT(ptr)     usb_u2f_report(ptr)
 #define  UDI_U2F_REPORT_SENT()       usb_u2f_report_sent()
-#define  UDI_U2F_STRING_ID           2
 
 
 #define  UDI_HID_REPORT_SENT()       usb_report_sent()
 #define  UDI_HID_SET_FEATURE(report) usb_set_feature(report)
 
 
-
-/**
- * Configuration of MSC interface
- */
+#define  UDI_MSC_EP_SIZE                 64
 #define  UDI_MSC_IFACE_NUMBER            2
+#define  UDI_MSC_STRING_ID               3
 #define  UDI_MSC_EP_IN                   (5 | USB_EP_DIR_IN)// FIXME -  was 1 and 2 - might be important...
 #define  UDI_MSC_EP_OUT                  (6 | USB_EP_DIR_OUT)
-#define  UDI_MSC_GLOBAL_VENDOR_ID        'A', 'T', 'M', 'E', 'L', ' ', ' ', ' '
-#define  UDI_MSC_GLOBAL_PRODUCT_VERSION  '1', '.', '0', '0'
+#define  UDI_MSC_GLOBAL_VENDOR_ID        'S', 'H', 'I', 'F', 'T', 'D', 'E', 'V'
+#define  UDI_MSC_GLOBAL_PRODUCT_VERSION  '0', '.', '0', '1'
 #define  UDI_MSC_ENABLE_EXT()            usb_msc_enable()
 #define  UDI_MSC_DISABLE_EXT()           usb_msc_disable()
-#define  UDI_MSC_STRING_ID               3
-
+#define  UDI_MSC_NOTIFY_TRANS_EXT()      usb_msc_notify_trans()
 
 
 // Interface descriptor structure for HID generic
@@ -123,6 +120,14 @@ typedef struct {
 	usb_ep_desc_t ep_in;
 	usb_ep_desc_t ep_out;
 } udi_hid_generic_desc_t;
+
+
+// Interface descriptor for MSC
+typedef struct {
+	usb_iface_desc_t iface;
+	usb_ep_desc_t ep_in;
+	usb_ep_desc_t ep_out;
+} udi_msc_desc_t;
 
 
 #ifdef BOOTLOADER 
