@@ -60,16 +60,30 @@ __extension__ static char sign_command[] = {[0 ... COMMANDER_REPORT_SIZE] = 0};
 static char TFA_PIN[VERIFYPASS_LOCK_CODE_LEN * 2 + 1];
 static int TFA_VERIFY = 0;
 
-// Must free() returned value (allocated inside base64() function)
-char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
-                          const uint8_t *key)
+
+void aes_derive_hmac_keys(const uint8_t *secret, uint8_t *encryption_key,
+                          uint8_t *authentication_key)
+{
+    uint8_t hash[SHA512_DIGEST_LENGTH];
+    sha512_Raw(secret, MEM_PAGE_LEN, hash);
+    memcpy(encryption_key, hash, MEM_PAGE_LEN);
+    memcpy(authentication_key, hash + MEM_PAGE_LEN, MEM_PAGE_LEN);
+}
+
+
+// Must free() returned value
+uint8_t *aes_cbc_init_encrypt(const unsigned char *in, int inlen, int *out_len,
+                              const uint8_t *key)
 {
     int  pads;
     int  inpadlen = inlen + N_BLOCK - inlen % N_BLOCK;
     unsigned char inpad[inpadlen];
     unsigned char enc[inpadlen];
     unsigned char iv[N_BLOCK];
-    unsigned char enc_cat[inpadlen + N_BLOCK]; // concatenating [ iv0  |  enc ]
+    uint8_t *enc_cat = malloc(sizeof(uint8_t) * (inpadlen +
+                              N_BLOCK)); // concatenating [ iv0  |  enc ]
+    *out_len = inpadlen + N_BLOCK;
+
     aes_context ctx[1];
 
     // Set cipher key
@@ -95,14 +109,57 @@ char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
     aes_cbc_encrypt( inpad, enc, inpadlen / N_BLOCK, iv, ctx );
     memcpy(enc_cat + N_BLOCK, enc, inpadlen);
 
-    // base64 encoding
-    int b64len;
-    char *b64;
-    b64 = base64(enc_cat, inpadlen + N_BLOCK, &b64len);
-    *out_b64len = b64len;
     utils_zero(inpad, inpadlen);
     utils_zero(ctx, sizeof(ctx));
+    return enc_cat;
+}
+
+
+// Must free() returned value (allocated inside base64() function)
+char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
+                          const uint8_t *key)
+{
+    int out_len;
+    uint8_t *enc_cat = aes_cbc_init_encrypt(in, inlen, &out_len, key);
+    char *b64;
+    b64 = base64(enc_cat, out_len, out_b64len);
+    free(enc_cat);
     return b64;
+}
+
+
+char *aes_cbc_init_decrypt(uint8_t *cipher, int cipher_len, int *decrypt_len,
+                           const uint8_t *key)
+{
+    *decrypt_len = 0;
+
+    // Set cipher key
+    aes_context ctx[1];
+    memset(ctx, 0, sizeof(ctx));
+    aes_set_key(key, 32, ctx);
+
+    unsigned char dec_pad[cipher_len - N_BLOCK];
+    aes_cbc_decrypt(cipher + N_BLOCK, dec_pad, cipher_len / N_BLOCK - 1, cipher, ctx);
+
+    // Strip PKCS7 padding
+    int padlen = dec_pad[cipher_len - N_BLOCK - 1];
+    if (cipher_len - N_BLOCK - padlen <= 0) {
+        utils_zero(dec_pad, sizeof(dec_pad));
+        utils_zero(ctx, sizeof(ctx));
+        return NULL;
+    }
+    char *dec = malloc(cipher_len - N_BLOCK - padlen + 1); // +1 for null termination
+    if (!dec) {
+        utils_zero(dec_pad, sizeof(dec_pad));
+        utils_zero(ctx, sizeof(ctx));
+        return NULL;
+    }
+    memcpy(dec, dec_pad, cipher_len - N_BLOCK - padlen);
+    dec[cipher_len - N_BLOCK - padlen] = '\0';
+    *decrypt_len = cipher_len - N_BLOCK - padlen + 1;
+    utils_zero(dec_pad, sizeof(dec_pad));
+    utils_zero(ctx, sizeof(ctx));
+    return dec;
 }
 
 
@@ -119,39 +176,17 @@ char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
     // Unbase64
     int ub64len;
     unsigned char *ub64 = unbase64((const char *)in, inlen, &ub64len);
-    if (!ub64 || (ub64len % N_BLOCK) || ub64len < N_BLOCK) {
+    if (!ub64) {
+        return NULL;
+    }
+    if ((ub64len % N_BLOCK) || ub64len < N_BLOCK) {
         free(ub64);
         return NULL;
     }
 
-    // Set cipher key
-    aes_context ctx[1];
-    memset(ctx, 0, sizeof(ctx));
-    aes_set_key(key, 32, ctx);
-
-    unsigned char dec_pad[ub64len - N_BLOCK];
-    aes_cbc_decrypt(ub64 + N_BLOCK, dec_pad, ub64len / N_BLOCK - 1, ub64, ctx);
+    char *dec = aes_cbc_init_decrypt(ub64, ub64len, decrypt_len, key);
     memset(ub64, 0, ub64len);
     free(ub64);
-
-    // Strip PKCS7 padding
-    int padlen = dec_pad[ub64len - N_BLOCK - 1];
-    if (ub64len - N_BLOCK - padlen <= 0) {
-        utils_zero(dec_pad, sizeof(dec_pad));
-        utils_zero(ctx, sizeof(ctx));
-        return NULL;
-    }
-    char *dec = malloc(ub64len - N_BLOCK - padlen + 1); // +1 for null termination
-    if (!dec) {
-        utils_zero(dec_pad, sizeof(dec_pad));
-        utils_zero(ctx, sizeof(ctx));
-        return NULL;
-    }
-    memcpy(dec, dec_pad, ub64len - N_BLOCK - padlen);
-    dec[ub64len - N_BLOCK - padlen] = '\0';
-    *decrypt_len = ub64len - N_BLOCK - padlen + 1;
-    utils_zero(dec_pad, sizeof(dec_pad));
-    utils_zero(ctx, sizeof(ctx));
     return dec;
 }
 
@@ -695,6 +730,12 @@ static void commander_process_seed(yajl_val json_node)
                 }
                 snprintf(entropy_c, sizeof(entropy_c), "%s", backup_hex);
                 ret = wallet_create(key, entropy_c);
+                if (ret == DBB_OK) {
+                    if (commander_process_backup_check(key, filename, attr_str(ATTR_HWW)) != DBB_OK) {
+                        memory_erase_hww_seed();
+                        return;
+                    }
+                }
             }
         }
         utils_zero(backup_hex, strlens(backup_hex));

@@ -33,8 +33,14 @@
 #include "memory.h"
 
 
+void aes_derive_hmac_keys(const uint8_t *secret, uint8_t *encryption_key,
+                          uint8_t *authentication_key);
+uint8_t *aes_cbc_init_encrypt(const unsigned char *in, int inlen, int *out_len,
+                              const uint8_t *key);
 char *aes_cbc_b64_encrypt(const unsigned char *in, int inlen, int *out_b64len,
                           const uint8_t *key);
+char *aes_cbc_init_decrypt(uint8_t *cipher, int cipher_len, int *decrypt_len,
+                           const uint8_t *key);
 char *aes_cbc_b64_decrypt(const unsigned char *in, int inlen, int *decrypt_len,
                           const uint8_t *key);
 

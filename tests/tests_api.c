@@ -2323,8 +2323,12 @@ static void tests_memory_setup(void)
         ASSERT_REPORT_HAS(flag_msg(DBB_ERR_MEM_SETUP));
     }
 
+    // Run before `memory_setup()` to test memory map updating
+    memory_reset_hww();
+    memory_update_memory_map();
+
     memory_setup();
-    memory_setup(); // run twice
+    memory_setup(); // run twice, first time accesses one-time factory install code
 
     api_format_send_cmd(cmd_str(CMD_password), tests_pwd, NULL);
     ASSERT_SUCCESS;
@@ -2343,9 +2347,9 @@ static void tests_memory_setup(void)
 static void run_utests(void)
 {
     u_run_test(tests_memory_setup);// Keep first
+    u_run_test(tests_name);
     u_run_test(tests_u2f);
     u_run_test(tests_echo_tfa);
-    u_run_test(tests_name);
     u_run_test(tests_password);
     u_run_test(tests_random);
     u_run_test(tests_device);
