@@ -99,9 +99,9 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
         usersig[i % FLASH_USERSIG_RN_LEN] = entropy[i % MEM_PAGE_LEN];
     }
     // Add entropy from ataes RNG
-    const uint8_t ataes_cmd[] = {ATAES_CMD_RAND, 0x02, 0x00, 0x00, 0x00, 0x00}; // Pseudo RNG
-    const uint8_t ataes_cmd_up[] = {ATAES_CMD_RAND, 0x00, 0x00, 0x00, 0x00, 0x00}; // True RNG - writes to EEPROM
-    uint8_t ret, ataes_ret[4 + ATAES_RAND_LEN] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
+    const uint8_t ataes_cmd[] = {ATAES_RAND_CMD, 0x02, 0x00, 0x00, 0x00, 0x00}; // Pseudo RNG
+    const uint8_t ataes_cmd_up[] = {ATAES_RAND_CMD, 0x00, 0x00, 0x00, 0x00, 0x00}; // True RNG - writes to EEPROM
+    uint8_t ret, ataes_ret[ATAES_RET_FRAME_LEN + ATAES_RAND_RET_LEN] = {0}; // Random command return packet [Count(1) || Return Code (1) | Data(16) || CRC (2)]
     while (len > n) {
         if (update_seed) {
             ret = ataes_process(ataes_cmd_up, sizeof(ataes_cmd_up), ataes_ret, sizeof(ataes_ret));
@@ -110,7 +110,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
             ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         }
         if (ret == DBB_OK && ataes_ret[0] && !ataes_ret[1]) {
-            for (i = 0; i < MIN(len - n, ATAES_RAND_LEN); i++) {
+            for (i = 0; i < MIN(len - n, ATAES_RAND_RET_LEN); i++) {
                 buf[(n + i) % len] ^= ataes_ret[(2 + i) % sizeof(ataes_ret)];
             }
         } else {
@@ -119,7 +119,7 @@ int random_bytes(uint8_t *buf, uint32_t len, uint8_t update_seed)
             HardFault_Handler();
             return DBB_ERROR;
         }
-        n += ATAES_RAND_LEN;
+        n += ATAES_RAND_RET_LEN;
     }
 #endif
     return DBB_OK;

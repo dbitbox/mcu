@@ -138,9 +138,12 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
         srand(time(NULL));
     }
     switch (command[0]) {
-        case ATAES_CMD_RAND: {
+        case ATAES_RAND_CMD: {
             // Use standard libary for off chip RNG
-            int i = 0, r = 16;
+            int i = 0, r = ATAES_RAND_RET_LEN;
+            if (response_len != ATAES_RAND_RET_LEN + ATAES_RET_FRAME_LEN) {
+                exit(1);
+            }
             response_block[i++] = response_len;// count
             response_block[i++] = 0x00;// success code
             while (r--) {
@@ -149,10 +152,27 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
             ataes_calculate_crc(i, response_block, response_block + i);
             return DBB_OK;
         }
-        case ATAES_CMD_LOCK: {
+        case ATAES_LOCK_CMD: {
             int i = 0;
+            if (response_len != ATAES_RET_FRAME_LEN) {
+                exit(1);
+            }
             response_block[i++] = response_len;// count
             response_block[i++] = 0x00;// success code
+            ataes_calculate_crc(i, response_block, response_block + i);
+            return DBB_OK;
+        }
+        case ATAES_CRUNCH_CMD: {
+            int i = 0, r = ATAES_CRUNCH_DATA_LEN;
+            if (response_len != ATAES_CRUNCH_DATA_LEN + ATAES_RET_FRAME_LEN) {
+                exit(1);
+            }
+            response_block[i++] = response_len;// count
+            response_block[i++] = 0x00;// success code
+            while (r--) {
+                // command[3] is number of crunch iterations
+                response_block[i++] = r + command[3];
+            }
             ataes_calculate_crc(i, response_block, response_block + i);
             return DBB_OK;
         }
@@ -235,6 +255,10 @@ int ataes_process(uint8_t const *command, uint16_t cmd_len,
 
     // Check if data is available to read (0x40)
     cnt = 0;
+    if (command[0] == ATAES_CRUNCH_CMD) {
+        // CRUNCH response time = ((count × 256) + 600)) × 1.25 microseconds
+        delay_ms((command[3] * 256 + 600) * 1.25 / 1000);
+    }
     while (1) {
         ret = ataes_eeprom_read(BOARD_COM_ATAES_ADDR_STATUS, 1, &ataes_status);
         if ((ataes_status & 0x40) && !ret) {

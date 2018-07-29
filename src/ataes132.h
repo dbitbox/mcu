@@ -32,9 +32,16 @@
 #include <stdint.h>
 
 
-#define ATAES_RAND_LEN 0x10
-#define ATAES_CMD_RAND 0x02
-#define ATAES_CMD_LOCK 0x0D
+#define ATAES_CMD_HEADER_LEN  0x06// [Command (1) || Mode (1) || Parameter1 (2) || Parameter2 (2)]
+#define ATAES_RET_FRAME_LEN   0x04// [Count (1) || Return Code (1) | <Data> || CRC (2)]
+#define ATAES_RAND_CMD        0x02
+#define ATAES_RAND_RET_LEN    0x10
+#define ATAES_CRUNCH_CMD      0x0B
+#define ATAES_CRUNCH_DATA_LEN 0x10
+#define ATAES_CRUNCH_SEED_LEN 0x10
+#define ATAES_CRUNCH_REFRESH  0x43// CRUNCH is called on first EEPROM access then periodically every REFRESH accesses
+#define ATAES_CRUNCH_COUNT    0xFF
+#define ATAES_LOCK_CMD        0x0D
 
 
 int ataes_process(uint8_t const *command, uint16_t cmd_len, uint8_t *response_block,

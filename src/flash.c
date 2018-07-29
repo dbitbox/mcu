@@ -65,10 +65,10 @@ uint32_t flash_write_user_signature(const void *p_buffer, uint32_t ul_size)
 
 uint32_t flash_read_user_signature(uint32_t *p_data, uint32_t ul_size)
 {
-    if (ul_size * sizeof(uint32_t) != FLASH_USERSIG_SIZE) {
+    if (ul_size * sizeof(uint32_t) > FLASH_USERSIG_SIZE) {
         return 1; // error
     }
-    memcpy(p_data, flash_user_signature_simulation, FLASH_USERSIG_SIZE);
+    memcpy(p_data, flash_user_signature_simulation, ul_size * sizeof(uint32_t));
     return 0; // success
 }
 

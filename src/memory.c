@@ -155,6 +155,32 @@ static uint8_t memory_eeprom(uint8_t *write_b, uint8_t *read_b, int32_t addr,
 }
 
 
+static uint8_t *memory_crunch(uint8_t *seed, uint8_t seed_len, uint8_t force)
+{
+    static uint16_t crunched = 0;
+    __extension__ static uint8_t data[] = {[0 ... ATAES_CRUNCH_DATA_LEN - 1] = 0xFF};
+    __extension__ uint8_t ataes_cmd[] = {[0 ... ATAES_CMD_HEADER_LEN + ATAES_CRUNCH_SEED_LEN - 1] = 0};
+    __extension__ uint8_t ataes_ret[] = {[0 ... ATAES_RET_FRAME_LEN + ATAES_CRUNCH_DATA_LEN - 1] = 0};
+    if (!(crunched % ATAES_CRUNCH_REFRESH) || force) {
+        uint8_t n, ret;
+        ataes_cmd[0] = ATAES_CRUNCH_CMD;
+        ataes_cmd[3] = ATAES_CRUNCH_COUNT;
+        for (n = 0; n < MIN(seed_len, ATAES_CRUNCH_SEED_LEN); n++) {
+            ataes_cmd[ATAES_CMD_HEADER_LEN + n] = seed[n];
+        }
+        ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
+        if (ret != DBB_OK || !ataes_ret[0] || ataes_ret[1]) {
+            HardFault_Handler();
+        }
+        for (n = 0; n < MIN(seed_len, ATAES_CRUNCH_DATA_LEN); n++) {
+            data[n] = seed[n] ^ ataes_ret[n + 2];
+        }
+    }
+    crunched++;
+    return data;
+}
+
+
 // Encrypted storage
 // `write_b` and `read_b` must be length `MEM_PAGE_LEN`
 static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
@@ -194,9 +220,12 @@ static uint8_t memory_eeprom_crypt(const uint8_t *write_b, uint8_t *read_b,
                        mempass);
             sha256_Raw(mempass, MEM_PAGE_LEN, mempass);
             break;
-        case MEM_MAP_V1:
+        case MEM_MAP_V1: {
+            uint8_t *data = memory_crunch(rn, sizeof(rn), 0);
             aes_derive_hmac_keys(mempass, mempass, authkey);
+            hmac_sha256(mempass, MEM_PAGE_LEN, data, ATAES_CRUNCH_DATA_LEN, mempass);
             break;
+        }
         default:
             goto err;
     }
@@ -419,6 +448,7 @@ static void memory_scramble_rn(void)
     for (i = 0; i < FLASH_USERSIG_RN_LEN; i++) {
         usersig[i] ^= number[i];
     }
+    memory_crunch(usersig, FLASH_USERSIG_RN_LEN, 1);
     flash_erase_user_signature();
     flash_write_user_signature((uint32_t *)usersig, FLASH_USERSIG_SIZE / sizeof(uint32_t));
 }
@@ -429,9 +459,9 @@ void memory_setup(void)
     if (memory_read_setup()) {
         // One-time setup on factory install
         // Lock Config Memory:              OP       MODE  PARAMETER1  PARAMETER2
-        const uint8_t ataes_cmd[] = {ATAES_CMD_LOCK, 0x02, 0x00, 0x00, 0x00, 0x00};
+        const uint8_t ataes_cmd[] = {ATAES_LOCK_CMD, 0x02, 0x00, 0x00, 0x00, 0x00};
         // Return packet [Count(1) || Return Code (1) || CRC (2)]
-        uint8_t ataes_ret[4] = {0};
+        uint8_t ataes_ret[ATAES_RET_FRAME_LEN] = {0};
         uint8_t ret = ataes_process(ataes_cmd, sizeof(ataes_cmd), ataes_ret, sizeof(ataes_ret));
         if (ret != DBB_OK || !ataes_ret[0] || ataes_ret[1]) {
             HardFault_Handler();
